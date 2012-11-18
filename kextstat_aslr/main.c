@@ -6,11 +6,11 @@
  * |__|\__\  __||______|/__/\_\ |__|  |__|\__\  __||______||______||__|\__\
  *    |_____|                            |_____|
  *
- * Kext ASLR
+ * Kextstat ASLR
  *
  * A small util to kernel extensions with true address in Mountain Lion due to KASLR
  *
- * fG! - 2012 - reverser@put.as - http://reverse.put.as
+ * (c) fG! - 2012 - reverser@put.as - http://reverse.put.as
  *
  * Note: This requires kmem/mem devices to be enabled
  * Edit /Library/Preferences/SystemConfiguration/com.apple.Boot.plist
@@ -24,7 +24,7 @@
  * You will need to supply sLoadedKexts symbol, which is not exported.
  * Disassemble the kernel and go to this method OSKext::lookupKextWithLoadTag
  * The pointer address to sLoadedKexts is moved to RDI after the call to IORecursiveLockLock
- *
+ * And also the base address of __TEXT segment command.
  */
 
 #include <stdio.h>
