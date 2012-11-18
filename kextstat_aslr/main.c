@@ -46,7 +46,7 @@
 
 #define SLOADEDKEXTS        0xFFFFFF80008AD228
 #define TEXT_BASE_ADDRESS   0xFFFFFF8000200000
-#define KMOD_MAX_NAME    64
+#define KMOD_MAX_NAME       64
 
 typedef uint64_t idt_t;
 
@@ -76,12 +76,11 @@ struct descriptor_idt
 	uint32_t reserved2;
 };
 
-mach_vm_address_t vmaddr_slide = 0;
-
 // prototypes
 int8_t get_kernel_type (void);
 idt_t  get_addr_idt (void);
-
+uint64_t calculate_int80address(int32_t fd_kmem, const uint64_t idt_address);
+uint64_t find_kernel_base(int32_t fd_kmem, const uint64_t int80_address);
 void header(void);
 void usage(void);
 int8_t readkmem(const int32_t fd, void *buffer, const uint64_t offset, const size_t size);
@@ -264,11 +263,11 @@ header(void)
 int main(int argc, char ** argv)
 {
 	header();
-    
-	if (argc < 1)
-	{
-		usage();
-	}
+    // XXX: support sLoadedKexts address as a parameter instead of fixed address
+//	if (argc < 1)
+//	{
+//		usage();
+//	}
 	
 	// we need to run this as root
 	if (getuid() != 0)
@@ -287,7 +286,7 @@ int main(int argc, char ** argv)
 	}
     
     // find kernel base address
-    // retrieve int80 address
+    // retrieve int80 address and then search backwards until the mach-o header
     idt_t idt_address = get_addr_idt();
     uint64_t int80_address = calculate_int80address(fd_kmem, idt_address);
     
@@ -297,6 +296,8 @@ int main(int argc, char ** argv)
         fprintf(stderr, "[ERROR] Could not find kernel base address!\n");
         exit(1);
     }
+    // compute the kernel aslr slide
+    // XXX: instead of fixed value we can read the kernel from disk and get the base value
     uint64_t kaslr_slide = kernel_base - TEXT_BASE_ADDRESS;
     printf("[INFO] Kernel ASLR slide is 0x%llx\n", kaslr_slide);
     // now we can have the address of pointer to sLoadedKexts
@@ -313,20 +314,16 @@ int main(int argc, char ** argv)
     printf("[INFO] Array of OSKext starts at 0x%llx\n", array_ptr);
     mach_vm_address_t OSKext_object[kexts_count];
     readkmem(fd_kmem, &OSKext_object, array_ptr, sizeof(OSKext_object));
-    printf("Index  Refs  Address             Size        Name (Version) <Linked Against>\n");
+    printf("Index  Refs  Address             Size        Name (Version)\n");
     for (unsigned int i = 0; i < kexts_count; i++)
     {
-//        printf("0x%llx\n", OSKext_object[i]);
         mach_vm_address_t kmod_info_ptr;
         readkmem(fd_kmem, &kmod_info_ptr, OSKext_object[i]+0x48, sizeof(kmod_info_ptr));
         kmod_info_t kmod_info;
         readkmem(fd_kmem, &kmod_info, kmod_info_ptr, sizeof(kmod_info_t));
-//        printf("Kmod at 0x%llx\n", kmod_info_ptr);
         char name[KMOD_MAX_NAME];
         readkmem(fd_kmem, &name, kmod_info_ptr+0x10, sizeof(name));
         printf("%5d  %4d  0x%016llx  0x%-8x  %s (%s)\n", i, kmod_info.reference_count, kmod_info.address, kmod_info.size, kmod_info.name, kmod_info.version);
-//        printf("name %s\n", kmod_info.name);
-//        printf("address %llx\n", kmod_info.address);
     }
 end:
 	return 0;
