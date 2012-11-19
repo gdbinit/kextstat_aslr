@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7B6CDE6A1659CE3B00893578 /* System.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B6CDE691659CE3B00893578 /* System.framework */; };
 		7B80CD94165880F100127A39 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B80CD93165880F100127A39 /* main.c */; };
 		7B80CD96165880F100127A39 /* kextstat_aslr.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 7B80CD95165880F100127A39 /* kextstat_aslr.1 */; };
 /* End PBXBuildFile section */
@@ -25,6 +26,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		7B6CDE691659CE3B00893578 /* System.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = System.framework; path = ../../../../System/Library/Frameworks/System.framework; sourceTree = "<group>"; };
 		7B80CD8F165880F100127A39 /* kextstat_aslr */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = kextstat_aslr; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B80CD93165880F100127A39 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		7B80CD95165880F100127A39 /* kextstat_aslr.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = kextstat_aslr.1; sourceTree = "<group>"; };
@@ -35,6 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7B6CDE6A1659CE3B00893578 /* System.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -44,6 +47,7 @@
 		7B80CD84165880F100127A39 = {
 			isa = PBXGroup;
 			children = (
+				7B6CDE691659CE3B00893578 /* System.framework */,
 				7B80CD92165880F100127A39 /* kextstat_aslr */,
 				7B80CD90165880F100127A39 /* Products */,
 			);
@@ -178,6 +182,10 @@
 		7B80CD9A165880F100127A39 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SDKROOT)/usr/lib/system\"",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALID_ARCHS = x86_64;
 			};
@@ -186,6 +194,10 @@
 		7B80CD9B165880F100127A39 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SDKROOT)/usr/lib/system\"",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALID_ARCHS = x86_64;
 			};
@@ -210,6 +222,7 @@
 				7B80CD9B165880F100127A39 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

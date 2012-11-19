@@ -20,11 +20,11 @@
  * gcc -Wall -o readkmem readkmem.c
  *
  * v0.1 - Initial version
+ * v0.2 - Retrieve kaslr slide via kas_info() syscall. Thanks to posixninja for the tip :-)
  *
  * You will need to supply sLoadedKexts symbol, which is not exported.
  * Disassemble the kernel and go to this method OSKext::lookupKextWithLoadTag
  * The pointer address to sLoadedKexts is moved to RDI after the call to IORecursiveLockLock
- * And also the base address of __TEXT segment command.
  */
 
 #include <stdio.h>
@@ -41,11 +41,12 @@
 #include <mach/mach_types.h>
 #include <stddef.h>
 #include <assert.h>
+#include <sys/syscall.h>
+#include <errno.h>
 
-#define VERSION "0.1"
+#define VERSION "0.2"
 
 #define SLOADEDKEXTS        0xFFFFFF80008AD228
-#define TEXT_BASE_ADDRESS   0xFFFFFF8000200000
 #define KMOD_MAX_NAME       64
 
 typedef uint64_t idt_t;
@@ -75,6 +76,11 @@ struct descriptor_idt
 	uint32_t offset_high;
 	uint32_t reserved2;
 };
+
+// from xnu/bsd/sys/kas_info.h
+#define KAS_INFO_KERNEL_TEXT_SLIDE_SELECTOR     (0)     /* returns uint64_t     */
+#define KAS_INFO_MAX_SELECTOR           (1)
+int kas_info(int selector, void *value, size_t *size);
 
 // prototypes
 int8_t get_kernel_type (void);
@@ -260,15 +266,46 @@ header(void)
 	fprintf(stderr,"-----------------------------------\n");
 }
 
+/*
+ * lame inline asm to use the kas_info() syscall. beware the difference if we want 64bits syscalls!
+ */
+void
+get_kaslr_slide(size_t *size, uint64_t *slide)
+{
+    // this is needed for 64bits syscalls!!!
+    // good post about it http://thexploit.com/secdev/mac-os-x-64-bit-assembly-system-calls/
+#define SYSCALL_CLASS_SHIFT                     24
+#define SYSCALL_CLASS_MASK                      (0xFF << SYSCALL_CLASS_SHIFT)
+#define SYSCALL_NUMBER_MASK                     (~SYSCALL_CLASS_MASK)
+#define SYSCALL_CLASS_UNIX                      2
+#define SYSCALL_CONSTRUCT_UNIX(syscall_number) \
+        ((SYSCALL_CLASS_UNIX << SYSCALL_CLASS_SHIFT) | \
+        (SYSCALL_NUMBER_MASK & (syscall_number)))
+    
+    uint64_t syscallnr = SYSCALL_CONSTRUCT_UNIX(SYS_kas_info);
+    uint64_t selector = KAS_INFO_KERNEL_TEXT_SLIDE_SELECTOR;
+    int result = 0;
+    __asm__ ("movq %1, %%rdi\n\t"
+             "movq %2, %%rsi\n\t"
+             "movq %3, %%rdx\n\t"
+             "movq %4, %%rax\n\t"
+             "syscall"
+             : "=a" (result)
+             : "r" (selector), "m" (slide), "m" (size), "a" (syscallnr)
+             : "rdi", "rsi", "rdx", "rax"
+             );
+}
+
 int main(int argc, char ** argv)
 {
+
 	header();
     // XXX: support sLoadedKexts address as a parameter instead of fixed address
 //	if (argc < 1)
 //	{
 //		usage();
 //	}
-	
+
 	// we need to run this as root
 	if (getuid() != 0)
 	{
@@ -296,9 +333,19 @@ int main(int argc, char ** argv)
         fprintf(stderr, "[ERROR] Could not find kernel base address!\n");
         exit(1);
     }
-    // compute the kernel aslr slide
-    // XXX: instead of fixed value we can read the kernel from disk and get the base value
-    uint64_t kaslr_slide = kernel_base - TEXT_BASE_ADDRESS;
+    
+    // retrieve kernel aslr slide using kas_info() syscall
+    // this is a private kernel syscall but we can access it in Mountain Lion if we link against System.framework
+    // or we can use my lame asm function get_kaslr_slide() :-)
+    size_t kaslr_size = 0;
+    uint64_t kaslr_slide = 0;
+    kaslr_size = sizeof(kaslr_slide);
+    int ret = kas_info(KAS_INFO_KERNEL_TEXT_SLIDE_SELECTOR, &kaslr_slide, &kaslr_size);
+    if (ret != 0)
+    {
+        printf("[ERROR] Could not get kernel ASLR slide info from kas_info(). Errno: %d\n", errno);
+        exit(1);
+    }
     printf("[INFO] Kernel ASLR slide is 0x%llx\n", kaslr_slide);
     // now we can have the address of pointer to sLoadedKexts
     mach_vm_address_t sLoadedKexts = SLOADEDKEXTS + kaslr_slide;
