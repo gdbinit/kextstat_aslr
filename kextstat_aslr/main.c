@@ -62,8 +62,8 @@
 #define VERSION "0.3"
 
 #define LOOKUPKEXTWITHLOADTAG "__ZN6OSKext21lookupKextWithLoadTagEj" // OSKext::lookupKextWithLoadTag symbol
-#define SLOADEDKEXTS        0xFFFFFF80008AD228
 #define KMOD_MAX_NAME       64
+#define DISASM_SIZE         4096
 
 typedef uint64_t idt_t;
 
@@ -334,7 +334,7 @@ find_sloadedkexts(uint8_t *buffer, int32_t buffer_size, mach_vm_address_t offset
     if (decodedInstructions == NULL)
     {
         printf("[ERROR] Decoded instructions allocation failed!\n");
-        return -1;
+        return 0;
     }
     unsigned int decodedInstructionsCount = 0;
 	_DecodeResult res = 0;
@@ -382,9 +382,7 @@ find_sloadedkexts(uint8_t *buffer, int32_t buffer_size, mach_vm_address_t offset
         ci.codeOffset += next;
         ci.codeLen -= next;
     }
-    end:
-        free(decodedInstructions);
-    failure:
+failure:
         free(decodedInstructions);
         return 0;
 }
@@ -396,12 +394,7 @@ int main(int argc, char ** argv)
 {
 
 	header();
-    // XXX: support sLoadedKexts address as a parameter instead of fixed address
-//	if (argc < 1)
-//	{
-//		usage();
-//	}
-
+    
 	// we need to run this as root
 	if (getuid() != 0)
 	{
@@ -409,7 +402,7 @@ int main(int argc, char ** argv)
 		exit(1);
 	}
 		
-    int32_t fd_kmem;
+    int32_t fd_kmem = -1;
     
 	if((fd_kmem = open("/dev/kmem",O_RDWR)) == -1)
 	{
@@ -421,7 +414,7 @@ int main(int argc, char ** argv)
     // retrieve kernel aslr slide using kas_info() syscall
     // this is a private kernel syscall but we can access it in Mountain Lion if we link against System.framework
     // or we can use my lame asm function get_kaslr_slide() :-)
-    size_t kaslr_size = 0;
+    size_t kaslr_size    = 0;
     uint64_t kaslr_slide = 0;
     kaslr_size = sizeof(kaslr_slide);
     int ret = kas_info(KAS_INFO_KERNEL_TEXT_SLIDE_SELECTOR, &kaslr_slide, &kaslr_size);
@@ -451,33 +444,50 @@ int main(int argc, char ** argv)
     mach_vm_address_t iorecursivelocklock = solve_kernel_symbol(&kinfo, "_IORecursiveLockLock");
     // disassemble and find the address of sLoadedKexts
     // it's easier to read it from memory than disk
-    uint8_t loadtag_buffer[4096];
-    readkmem(fd_kmem, loadtag_buffer, loadtag_symbol, 4096);
-    mach_vm_address_t sLoadedKexts = find_sloadedkexts(loadtag_buffer, 4096, loadtag_symbol, iorecursivelocklock);
-    
-    mach_vm_address_t sLoadedKexts_object;
+    uint8_t loadtag_buffer[DISASM_SIZE];
+    readkmem(fd_kmem, loadtag_buffer, loadtag_symbol, DISASM_SIZE);
+    mach_vm_address_t sLoadedKexts = find_sloadedkexts(loadtag_buffer, DISASM_SIZE, loadtag_symbol, iorecursivelocklock);
+    if (sLoadedKexts == 0)
+    {
+        printf("[ERROR] sLoadedKexts not found!\n");
+        exit(1);
+    }
+    mach_vm_address_t sLoadedKexts_object = 0;
     // read where sLoadedKexts is pointing to so we can get the OSArray object
     readkmem(fd_kmem, &sLoadedKexts_object, sLoadedKexts, 8);
     printf("[INFO] sLoadedKexts OSArray object located at 0x%llx\n", sLoadedKexts_object);
-    unsigned int kexts_count;
+    uint32_t kexts_count = 0;
     readkmem(fd_kmem, &kexts_count, sLoadedKexts_object+0x20, sizeof(unsigned int));
+    if (kexts_count == 0)
+    {
+        printf("[ERROR] Could not retrieve number of loaded kexts!\n");
+        exit(1);
+    }
     printf("[INFO] Total kexts loaded %d\n", kexts_count);
-    mach_vm_address_t array_ptr;
+    mach_vm_address_t array_ptr = 0;
     readkmem(fd_kmem, &array_ptr, sLoadedKexts_object+0x18, sizeof(mach_vm_address_t));
     printf("[INFO] Array of OSKext starts at 0x%llx\n", array_ptr);
-    mach_vm_address_t OSKext_object[kexts_count];
-    readkmem(fd_kmem, &OSKext_object, array_ptr, sizeof(OSKext_object));
+    size_t OSKext_object_len = kexts_count * sizeof(mach_vm_address_t);
+    mach_vm_address_t *OSKext_object = malloc(OSKext_object_len);
+    if (readkmem(fd_kmem, OSKext_object, array_ptr, OSKext_object_len) != 0)
+    {
+        printf("[ERROR] Failed to read OSKext array!\n");
+        exit(1);
+    }
+
     printf("Index  Refs  Address             Size        Name (Version)\n");
     for (unsigned int i = 0; i < kexts_count; i++)
     {
-        mach_vm_address_t kmod_info_ptr;
+        mach_vm_address_t kmod_info_ptr = 0;
         readkmem(fd_kmem, &kmod_info_ptr, OSKext_object[i]+0x48, sizeof(kmod_info_ptr));
-        kmod_info_t kmod_info;
+        kmod_info_t kmod_info = { 0 };
         readkmem(fd_kmem, &kmod_info, kmod_info_ptr, sizeof(kmod_info_t));
         char name[KMOD_MAX_NAME];
         readkmem(fd_kmem, &name, kmod_info_ptr+0x10, sizeof(name));
         printf("%5d  %4d  0x%016llx  0x%-8lx  %s (%s)\n", i, kmod_info.reference_count, (uint64_t)kmod_info.address, kmod_info.size, kmod_info.name, kmod_info.version);
     }
 end:
+    free(OSKext_object);
+    free(kernel_buffer);
 	return 0;
 }
