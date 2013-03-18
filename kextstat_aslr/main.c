@@ -50,6 +50,7 @@
 #include <sys/sysctl.h>
 #include <ctype.h>
 #include <mach-o/loader.h>
+#include <mach-o/nlist.h>
 #include <mach/mach_types.h>
 #include <stddef.h>
 #include <assert.h>
@@ -98,6 +99,8 @@ struct kernel_info
     uint32_t symboltable_nr_symbols;
     uint32_t stringtable_fileoff;
     uint32_t stringtable_size;
+    void *linkedit_buf; // pointer to __LINKEDIT area
+    uint64_t kaslr_slide;
 };
 
 // from xnu/bsd/sys/kas_info.h
@@ -274,6 +277,38 @@ process_kernel_mach_header(const void *kernel_buffer, struct kernel_info *kinfo)
 }
 
 /*
+ * function to solve a kernel symbol
+ */
+mach_vm_address_t
+solve_kernel_symbol(struct kernel_info *kinfo, char *symbol_to_solve)
+{
+    struct nlist_64 *nlist = NULL;
+    
+    if (kinfo == NULL || kinfo->linkedit_buf == NULL) return 0;
+    
+    for (uint32_t i = 0; i < kinfo->symboltable_nr_symbols; i++)
+    {
+        // symbols and strings offsets into LINKEDIT
+        mach_vm_address_t symbol_off = kinfo->symboltable_fileoff - kinfo->linkedit_fileoff;
+        mach_vm_address_t string_off = kinfo->stringtable_fileoff - kinfo->linkedit_fileoff;
+        
+        nlist = (struct nlist_64*)((char*)kinfo->linkedit_buf + symbol_off + i * sizeof(struct nlist_64));
+        char *symbol_string = ((char*)kinfo->linkedit_buf + string_off + nlist->n_un.n_strx);
+        // find if symbol matches
+        if (strncmp(symbol_to_solve, symbol_string, strlen(symbol_to_solve)) == 0)
+        {
+#if DEBUG
+            printf("[DEBUG] found symbol %s at %llx\n", symbol_to_solve, nlist->n_value);
+#endif
+            // the symbols are without kernel ASLR so we need to add it
+            return (nlist->n_value + kinfo->kaslr_slide);
+        }
+    }
+    // failure
+    return 0;
+}
+
+/*
  * where all the fun begins
  */
 int main(int argc, char ** argv)
@@ -301,22 +336,7 @@ int main(int argc, char ** argv)
 		fprintf(stderr,"Add parameter kmem=1 to /Library/Preferences/SystemConfiguration/com.apple.Boot.plist\n");
 		exit(1);
 	}
-    
-    // get info from the kernel at disk
-    uint8_t *kernel_buffer = NULL;
-    read_target(&kernel_buffer, "/mach_kernel");
-    // get info we need to solve symbols from Mach-O header
-    struct kernel_info kinfo = { 0 };
-    if (process_kernel_mach_header((void*)kernel_buffer, &kinfo))
-    {
-        printf("[ERROR] Kernel Mach-O header processing failed!\n");
-        exit(1);
-    }
-    // solve the OSKext::lookupKextWithLoadTag symbol
-    solve_symbol(LOOKUPKEXTWITHLOADTAG);
-    
-    // find kernel base address
-    
+
     // retrieve kernel aslr slide using kas_info() syscall
     // this is a private kernel syscall but we can access it in Mountain Lion if we link against System.framework
     // or we can use my lame asm function get_kaslr_slide() :-)
@@ -330,6 +350,24 @@ int main(int argc, char ** argv)
         exit(1);
     }
     printf("[INFO] Kernel ASLR slide is 0x%llx\n", kaslr_slide);
+
+    // get info from the kernel at disk
+    uint8_t *kernel_buffer = NULL;
+    read_target(&kernel_buffer, "/mach_kernel");
+    // get info we need to solve symbols from Mach-O header
+    struct kernel_info kinfo = { 0 };
+    if (process_kernel_mach_header((void*)kernel_buffer, &kinfo))
+    {
+        printf("[ERROR] Kernel Mach-O header processing failed!\n");
+        exit(1);
+    }
+    // set a pointer to __LINKEDIT location in the kernel buffer
+    kinfo.linkedit_buf = (void*)((char*)kernel_buffer + kinfo.linkedit_fileoff);
+    kinfo.kaslr_slide = kaslr_slide;
+    // solve the OSKext::lookupKextWithLoadTag symbol
+    mach_vm_address_t loadtag_symbol = solve_kernel_symbol(&kinfo, LOOKUPKEXTWITHLOADTAG);
+    // disassemble and find the address of sLoadedKexts
+    
     // now we can have the address of pointer to sLoadedKexts
     mach_vm_address_t sLoadedKexts = SLOADEDKEXTS + kaslr_slide;
     mach_vm_address_t sLoadedKexts_object;
