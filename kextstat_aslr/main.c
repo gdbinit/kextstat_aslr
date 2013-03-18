@@ -96,89 +96,9 @@ struct descriptor_idt
 int kas_info(int selector, void *value, size_t *size);
 
 // prototypes
-int8_t get_kernel_type (void);
-idt_t  get_addr_idt (void);
-uint64_t calculate_int80address(int32_t fd_kmem, const uint64_t idt_address);
-uint64_t find_kernel_base(int32_t fd_kmem, const uint64_t int80_address);
 void header(void);
 void usage(void);
 int8_t readkmem(const int32_t fd, void *buffer, const uint64_t offset, const size_t size);
-
-// retrieve the base address for the IDT
-idt_t
-get_addr_idt (void)
-{
-	// allocate enough space for 32 and 64 bits addresses
-	uint8_t idtr[10];
-	__asm__ volatile ("sidt %0": "=m" (idtr));
-    return *((idt_t *) &idtr[2]);
-}
-
-uint64_t
-calculate_int80address(int32_t fd_kmem, const uint64_t idt_address)
-{
-  	// find the address of interrupt 0x80 - EXCEP64_SPC_USR(0x80,hi64_unix_scall) @ osfmk/i386/idt64.s
-	struct descriptor_idt *int80_descriptor = NULL;
-	uint64_t int80_address = 0;
-	uint64_t high          = 0;
-    uint32_t middle        = 0;
-    
-	int80_descriptor = malloc(sizeof(struct descriptor_idt));
-	// retrieve the descriptor for interrupt 0x80
-    // the IDT is an array of descriptors
-	readkmem(fd_kmem, int80_descriptor, idt_address+sizeof(struct descriptor_idt)*0x80, sizeof(struct descriptor_idt));
-    // we need to compute the address, it's not direct
-    // extract the stub address
-    high = (unsigned long)int80_descriptor->offset_high << 32;
-    middle = (unsigned int)int80_descriptor->offset_middle << 16;
-    int80_address = (uint64_t)(high + middle + int80_descriptor->offset_low);
-	printf("[OK] Address of interrupt 80 stub is %p\n", (void*)int80_address);
-    return(int80_address);
-}
-
-uint64_t
-find_kernel_base(int32_t fd_kmem, const uint64_t int80_address)
-{
-    uint64_t temp_address   = int80_address;
-    // the step amount to search backwards from int80
-    uint16_t step_value     = 4096; // step must be at least sizeof mach_header and a segment_command
-    uint16_t length         = step_value;
-    uint8_t *temp_buffer    = malloc(step_value);
-    
-    struct segment_command_64 *segment_command = NULL;
-    while (temp_address > 0)
-    {
-        // read the kernel mem contents
-        readkmem(fd_kmem, temp_buffer, temp_address, length);
-        // iterate thru buffer contents, searching for mach-o magic value
-        for (uint32_t x = 0; x < length; x++)
-        {
-            if (*(uint32_t*)(temp_buffer + x) == MH_MAGIC_64)
-            {
-                segment_command = (struct segment_command_64*)(temp_buffer + x + sizeof(struct mach_header_64));
-                if (strncmp(segment_command->segname, "__TEXT", 16) == 0)
-                {
-                    printf("[OK] Found kernel mach-o header address at %p\n", (void*)(temp_address+x));
-                    return((uint64_t)(temp_address+x));
-                }
-            }
-        }
-        // verify if next block to be read is valid or not
-        // adjust the step value to a smaller value so we can proceed
-        while(readkmem(fd_kmem, temp_buffer, temp_address-step_value, length) == -2)
-        {
-            step_value = 1; // we could find out which is the biggest acceptable value
-            // but it seems like a waste of time - I'm an Economist :P
-            // we can read smaller values to avoid overlapping
-            length = sizeof(struct mach_header_64) + sizeof(struct segment_command_64);
-        }
-        // check for int overflow
-        if (temp_address - step_value > temp_address) break;
-        
-        temp_address -= step_value;
-    }
-    return(0);
-}
 
 int8_t
 readkmem(const int32_t fd, void *buffer, const uint64_t offset, const size_t size)
@@ -328,16 +248,6 @@ int main(int argc, char ** argv)
     solve_symbol(LOOKUPKEXTWITHLOADTAG);
     
     // find kernel base address
-    // retrieve int80 address and then search backwards until the mach-o header
-    idt_t idt_address = get_addr_idt();
-    uint64_t int80_address = calculate_int80address(fd_kmem, idt_address);
-    
-    uint64_t kernel_base = find_kernel_base(fd_kmem, int80_address);
-    if (kernel_base == 0)
-    {
-        fprintf(stderr, "[ERROR] Could not find kernel base address!\n");
-        exit(1);
-    }
     
     // retrieve kernel aslr slide using kas_info() syscall
     // this is a private kernel syscall but we can access it in Mountain Lion if we link against System.framework
