@@ -63,12 +63,12 @@
 
 typedef uint64_t idt_t;
 
-struct sysent64 {		/* system call table */
-	int16_t		sy_narg;	/* number of args */
-	int8_t		sy_resv;	/* reserved  */
-	int8_t		sy_flags;	/* flags */
+struct sysent64 {		        /* system call table */
+	int16_t		sy_narg;	    /* number of args */
+	int8_t		sy_resv;	    /* reserved  */
+	int8_t		sy_flags;	    /* flags */
     uint32_t    padding;        /* padding, x86 binary against 64bits kernel would fail */
-	uint64_t	sy_call;	/* implementing function */
+	uint64_t	sy_call;	    /* implementing function */
 	uint64_t	sy_arg_munge32; /* system call arguments munger for 32-bit process */
 	uint64_t	sy_arg_munge64; /* system call arguments munger for 64-bit process */
 	int32_t		sy_return_type; /* system call return types */
@@ -119,14 +119,13 @@ calculate_int80address(int32_t fd_kmem, const uint64_t idt_address)
   	// find the address of interrupt 0x80 - EXCEP64_SPC_USR(0x80,hi64_unix_scall) @ osfmk/i386/idt64.s
 	struct descriptor_idt *int80_descriptor = NULL;
 	uint64_t int80_address = 0;
-	uint64_t high       = 0;
-    uint32_t middle     = 0;
+	uint64_t high          = 0;
+    uint32_t middle        = 0;
     
 	int80_descriptor = malloc(sizeof(struct descriptor_idt));
 	// retrieve the descriptor for interrupt 0x80
     // the IDT is an array of descriptors
 	readkmem(fd_kmem, int80_descriptor, idt_address+sizeof(struct descriptor_idt)*0x80, sizeof(struct descriptor_idt));
-    
     // we need to compute the address, it's not direct
     // extract the stub address
     high = (unsigned long)int80_descriptor->offset_high << 32;
@@ -153,9 +152,9 @@ find_kernel_base(int32_t fd_kmem, const uint64_t int80_address)
         // iterate thru buffer contents, searching for mach-o magic value
         for (uint32_t x = 0; x < length; x++)
         {
-            if (*(uint32_t*)(temp_buffer+x) == MH_MAGIC_64)
+            if (*(uint32_t*)(temp_buffer + x) == MH_MAGIC_64)
             {
-                segment_command = (struct segment_command_64*)(temp_buffer+x+sizeof(struct mach_header_64));
+                segment_command = (struct segment_command_64*)(temp_buffer + x + sizeof(struct mach_header_64));
                 if (strncmp(segment_command->segname, "__TEXT", 16) == 0)
                 {
                     printf("[OK] Found kernel mach-o header address at %p\n", (void*)(temp_address+x));
@@ -245,6 +244,9 @@ get_kaslr_slide(size_t *size, uint64_t *slide)
              );
 }
 
+/*
+ * where all the fun begins
+ */
 int main(int argc, char ** argv)
 {
 
@@ -319,7 +321,7 @@ int main(int argc, char ** argv)
         readkmem(fd_kmem, &kmod_info, kmod_info_ptr, sizeof(kmod_info_t));
         char name[KMOD_MAX_NAME];
         readkmem(fd_kmem, &name, kmod_info_ptr+0x10, sizeof(name));
-        printf("%5d  %4d  0x%016llx  0x%-8x  %s (%s)\n", i, kmod_info.reference_count, kmod_info.address, kmod_info.size, kmod_info.name, kmod_info.version);
+        printf("%5d  %4d  0x%016llx  0x%-8lx  %s (%s)\n", i, kmod_info.reference_count, (uint64_t)kmod_info.address, kmod_info.size, kmod_info.name, kmod_info.version);
     }
 end:
 	return 0;
