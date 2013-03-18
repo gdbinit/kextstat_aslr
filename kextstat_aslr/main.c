@@ -19,6 +19,8 @@
  * v0.1 - Initial version
  * v0.2 - Retrieve kaslr slide via kas_info() syscall. Thanks to posixninja for the tip :-)
  * v0.3 - Cleanups
+ * v1.0 - Use diStorm to find sLoadedKexts so everything is dynamic
+ *        The only dependency is on OSArray class, since we are using fixed offsets
  *
  * You will need to supply sLoadedKexts symbol, which is not exported.
  * Disassemble the kernel and go to this method OSKext::lookupKextWithLoadTag
@@ -59,7 +61,7 @@
 #include "distorm.h"
 #include "mnemonics.h"
 
-#define VERSION "0.3"
+#define VERSION "1.0"
 
 #define LOOKUPKEXTWITHLOADTAG "__ZN6OSKext21lookupKextWithLoadTagEj" // OSKext::lookupKextWithLoadTag symbol
 #define KMOD_MAX_NAME       64
@@ -386,6 +388,8 @@ failure:
         free(decodedInstructions);
         return 0;
 }
+
+#pragma mark Main!
 
 /*
  * where all the fun begins

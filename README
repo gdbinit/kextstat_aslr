@@ -9,17 +9,25 @@ Kextstat ASLR
 
 A small util to kernel extensions with true address in Mountain Lion due to KASLR
  
-(c) fG! - 2012 - reverser@put.as - http://reverse.put.as
+(c) fG!, 2012, 2013 - reverser@put.as - http://reverse.put.as
  
 Note: This requires kmem/mem devices to be enabled
 Edit /Library/Preferences/SystemConfiguration/com.apple.Boot.plist
 add kmem=1 parameter, and reboot!
 
-You will need to supply sLoadedKexts symbol, which is not exported.
-Disassemble the kernel and go to this method OSKext::lookupKextWithLoadTag
-The pointer address to sLoadedKexts is moved to RDI after the call to IORecursiveLockLock
- 
-And also the base address of __TEXT segment command.
+This version can work with all Mountain Lion versions out of the box and doesn't
+need anymore supplied values.
+It should work with any future OS X versions if OSArray class doesn't change.
+
+Enjoy,
+fG!
+
+
+Change log:
 
 v0.1 - Initial version
- 
+v0.2 - Retrieve kaslr slide via kas_info() syscall. Thanks to posixninja for the tip :-)
+v0.3 - Cleanups
+v1.0 - Use diStorm to find sLoadedKexts so everything is dynamic
+       The only dependency is on OSArray class, since we are using fixed offsets
+
