@@ -8,7 +8,7 @@
  *
  * Kextstat ASLR
  *
- * A small util to kernel extensions with true address in Mountain Lion due to KASLR
+ * A small util to list kernel extensions with true address in Mountain Lion due to KASLR
  *
  * (c) fG!, 2012,2013 - reverser@put.as - http://reverse.put.as
  *
@@ -449,7 +449,11 @@ int main(int argc, char ** argv)
     // disassemble and find the address of sLoadedKexts
     // it's easier to read it from memory than disk
     uint8_t loadtag_buffer[DISASM_SIZE];
-    readkmem(fd_kmem, loadtag_buffer, loadtag_symbol, DISASM_SIZE);
+    if (readkmem(fd_kmem, loadtag_buffer, loadtag_symbol, DISASM_SIZE) != 0)
+    {
+        printf("[ERROR] Unable to read OSKext::lookupKextWithLoadTag from kernel memory!\n");
+        exit(1);
+    }
     mach_vm_address_t sLoadedKexts = find_sloadedkexts(loadtag_buffer, DISASM_SIZE, loadtag_symbol, iorecursivelocklock);
     if (sLoadedKexts == 0)
     {
