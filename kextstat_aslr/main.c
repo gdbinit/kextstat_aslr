@@ -90,6 +90,16 @@ struct descriptor_idt
 	uint32_t reserved2;
 };
 
+struct kernel_info
+{
+    uint64_t linkedit_fileoff;
+    uint64_t linkedit_size;
+    uint32_t symboltable_fileoff;
+    uint32_t symboltable_nr_symbols;
+    uint32_t stringtable_fileoff;
+    uint32_t stringtable_size;
+};
+
 // from xnu/bsd/sys/kas_info.h
 #define KAS_INFO_KERNEL_TEXT_SLIDE_SELECTOR     (0)     /* returns uint64_t     */
 #define KAS_INFO_MAX_SELECTOR           (1)
@@ -98,9 +108,13 @@ int kas_info(int selector, void *value, size_t *size);
 // prototypes
 void header(void);
 void usage(void);
-int8_t readkmem(const int32_t fd, void *buffer, const uint64_t offset, const size_t size);
+static int8_t readkmem(const int32_t fd, void *buffer, const uint64_t offset, const size_t size);
+static kern_return_t process_kernel_mach_header(const void *kernel_buffer, struct kernel_info *kinfo);
+static uint64_t read_target(uint8_t **targetBuffer, const char *target);
 
-int8_t
+#pragma mark Functions to read from kernel memory and file system
+
+static int8_t
 readkmem(const int32_t fd, void *buffer, const uint64_t offset, const size_t size)
 {
 	if(lseek(fd, offset, SEEK_SET) != offset)
@@ -164,6 +178,8 @@ read_target(uint8_t **targetBuffer, const char *target)
     return(fileSize);
 }
 
+#pragma mark Header and help functions
+
 void
 usage(void)
 {
@@ -181,6 +197,7 @@ header(void)
 	fprintf(stderr,"       KextASLR v%s - (c) fG!\n",VERSION);
 	fprintf(stderr,"-----------------------------------\n");
 }
+
 
 /*
  * lame inline asm to use the kas_info() syscall. beware the difference if we want 64bits syscalls!
@@ -210,6 +227,50 @@ get_kaslr_slide(size_t *size, uint64_t *slide)
              : "r" (selector), "m" (slide), "m" (size), "a" (syscallnr)
              : "rdi", "rsi", "rdx", "rax"
              );
+}
+
+#pragma mark Mach-O header and symbol related functions
+
+/*
+ * retrieve necessary mach-o header information from the kernel buffer
+ * results stored in kernel_info structure
+ */
+static kern_return_t
+process_kernel_mach_header(const void *kernel_buffer, struct kernel_info *kinfo)
+{
+    struct mach_header_64 *mh = (struct mach_header_64*)kernel_buffer;
+    // test if it's a valid mach-o header (or appears to be)
+    if (mh->magic != MH_MAGIC_64) return KERN_FAILURE;
+    
+    struct load_command *load_cmd = NULL;
+    // point to the first load command
+    char *load_cmd_addr = (char*)kernel_buffer + sizeof(struct mach_header_64);
+    // iterate over all load cmds and retrieve required info to solve symbols
+    // __LINKEDIT location and symbol/string table location
+    for (uint32_t i = 0; i < mh->ncmds; i++)
+    {
+        load_cmd = (struct load_command*)load_cmd_addr;
+        if (load_cmd->cmd == LC_SEGMENT_64)
+        {
+            struct segment_command_64 *seg_cmd = (struct segment_command_64*)load_cmd;
+            if (strncmp(seg_cmd->segname, "__LINKEDIT", 16) == 0)
+            {
+                kinfo->linkedit_fileoff = seg_cmd->fileoff;
+                kinfo->linkedit_size    = seg_cmd->filesize;
+            }
+        }
+        // table information available at LC_SYMTAB command
+        else if (load_cmd->cmd == LC_SYMTAB)
+        {
+            struct symtab_command *symtab_cmd = (struct symtab_command*)load_cmd;
+            kinfo->symboltable_fileoff    = symtab_cmd->symoff;
+            kinfo->symboltable_nr_symbols = symtab_cmd->nsyms;
+            kinfo->stringtable_fileoff    = symtab_cmd->stroff;
+            kinfo->stringtable_size       = symtab_cmd->strsize;
+        }
+        load_cmd_addr += load_cmd->cmdsize;
+    }
+    return KERN_SUCCESS;
 }
 
 /*
@@ -244,6 +305,13 @@ int main(int argc, char ** argv)
     // get info from the kernel at disk
     uint8_t *kernel_buffer = NULL;
     read_target(&kernel_buffer, "/mach_kernel");
+    // get info we need to solve symbols from Mach-O header
+    struct kernel_info kinfo = { 0 };
+    if (process_kernel_mach_header((void*)kernel_buffer, &kinfo))
+    {
+        printf("[ERROR] Kernel Mach-O header processing failed!\n");
+        exit(1);
+    }
     // solve the OSKext::lookupKextWithLoadTag symbol
     solve_symbol(LOOKUPKEXTWITHLOADTAG);
     
