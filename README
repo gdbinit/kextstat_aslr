@@ -19,6 +19,8 @@ This version can work with all Mountain Lion versions out of the box and doesn't
 need anymore supplied values.
 It should work with any future OS X versions if OSArray class doesn't change.
 
+I had to change the license to GPLv3 due to diStorm licensing terms.
+
 Enjoy,
 fG!
 
