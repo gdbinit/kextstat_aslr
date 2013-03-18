@@ -58,6 +58,7 @@
 
 #define VERSION "0.3"
 
+#define LOOKUPKEXTWITHLOADTAG "__ZN6OSKext21lookupKextWithLoadTagEj" // OSKext::lookupKextWithLoadTag symbol
 #define SLOADEDKEXTS        0xFFFFFF80008AD228
 #define KMOD_MAX_NAME       64
 
@@ -196,6 +197,53 @@ readkmem(const int32_t fd, void *buffer, const uint64_t offset, const size_t siz
     return(0);
 }
 
+/*
+ * read the target file into a buffer
+ */
+static uint64_t
+read_target(uint8_t **targetBuffer, const char *target)
+{
+    FILE *in_file = NULL;
+	
+    in_file = fopen(target, "r");
+    if (!in_file)
+    {
+		fprintf(stderr, "[ERROR] Could not open target file %s!\n", target);
+        exit(1);
+    }
+    if (fseek(in_file, 0, SEEK_END))
+    {
+		fprintf(stderr, "[ERROR] Fseek failed at %s\n", target);
+        exit(1);
+    }
+    
+    long fileSize = ftell(in_file);
+    
+    if (fseek(in_file, 0, SEEK_SET))
+    {
+		fprintf(stderr, "[ERROR] Fseek failed at %s\n", target);
+        exit(1);
+    }
+    
+    *targetBuffer = malloc(fileSize * sizeof(uint8_t));
+    
+    if (*targetBuffer == NULL)
+    {
+        fprintf(stderr, "[ERROR] Malloc failed!\n");
+        exit(1);
+    }
+    
+    fread(*targetBuffer, fileSize, 1, in_file);
+	if (ferror(in_file))
+	{
+		fprintf(stderr, "[ERROR] fread failed at %s\n", target);
+        free(*targetBuffer);
+		exit(1);
+	}
+    fclose(in_file);
+    return(fileSize);
+}
+
 void
 usage(void)
 {
@@ -272,6 +320,12 @@ int main(int argc, char ** argv)
 		fprintf(stderr,"Add parameter kmem=1 to /Library/Preferences/SystemConfiguration/com.apple.Boot.plist\n");
 		exit(1);
 	}
+    
+    // get info from the kernel at disk
+    uint8_t *kernel_buffer = NULL;
+    read_target(&kernel_buffer, "/mach_kernel");
+    // solve the OSKext::lookupKextWithLoadTag symbol
+    solve_symbol(LOOKUPKEXTWITHLOADTAG);
     
     // find kernel base address
     // retrieve int80 address and then search backwards until the mach-o header
