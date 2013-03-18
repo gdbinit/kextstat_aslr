@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #include "operands.h"
 #include "x86defs.h"
 #include "insts.h"
-#include "../include/mnemonics.h"
+#include "mnemonics.h"
 
 
 /* Maps a register to its register-class mask. */

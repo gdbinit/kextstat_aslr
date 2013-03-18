@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7B1593D416F7212300140560 /* decoder.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593C316F7212200140560 /* decoder.c */; };
+		7B1593D516F7212300140560 /* distorm.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593C516F7212300140560 /* distorm.c */; };
+		7B1593D616F7212300140560 /* instructions.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593C616F7212300140560 /* instructions.c */; };
+		7B1593D716F7212300140560 /* insts.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593C816F7212300140560 /* insts.c */; };
+		7B1593D816F7212300140560 /* mnemonics.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593CA16F7212300140560 /* mnemonics.c */; };
+		7B1593D916F7212300140560 /* operands.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593CB16F7212300140560 /* operands.c */; };
+		7B1593DA16F7212300140560 /* prefix.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593CD16F7212300140560 /* prefix.c */; };
+		7B1593DB16F7212300140560 /* textdefs.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593CF16F7212300140560 /* textdefs.c */; };
+		7B1593DC16F7212300140560 /* wstring.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593D116F7212300140560 /* wstring.c */; };
 		7B6CDE6A1659CE3B00893578 /* System.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B6CDE691659CE3B00893578 /* System.framework */; };
 		7B80CD94165880F100127A39 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B80CD93165880F100127A39 /* main.c */; };
 		7B80CD96165880F100127A39 /* kextstat_aslr.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 7B80CD95165880F100127A39 /* kextstat_aslr.1 */; };
@@ -26,6 +35,26 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		7B1593C216F7212200140560 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		7B1593C316F7212200140560 /* decoder.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = decoder.c; sourceTree = "<group>"; };
+		7B1593C416F7212200140560 /* decoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = decoder.h; sourceTree = "<group>"; };
+		7B1593C516F7212300140560 /* distorm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = distorm.c; sourceTree = "<group>"; };
+		7B1593C616F7212300140560 /* instructions.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = instructions.c; sourceTree = "<group>"; };
+		7B1593C716F7212300140560 /* instructions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = instructions.h; sourceTree = "<group>"; };
+		7B1593C816F7212300140560 /* insts.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = insts.c; sourceTree = "<group>"; };
+		7B1593C916F7212300140560 /* insts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = insts.h; sourceTree = "<group>"; };
+		7B1593CA16F7212300140560 /* mnemonics.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mnemonics.c; sourceTree = "<group>"; };
+		7B1593CB16F7212300140560 /* operands.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = operands.c; sourceTree = "<group>"; };
+		7B1593CC16F7212300140560 /* operands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = operands.h; sourceTree = "<group>"; };
+		7B1593CD16F7212300140560 /* prefix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = prefix.c; sourceTree = "<group>"; };
+		7B1593CE16F7212300140560 /* prefix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = prefix.h; sourceTree = "<group>"; };
+		7B1593CF16F7212300140560 /* textdefs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = textdefs.c; sourceTree = "<group>"; };
+		7B1593D016F7212300140560 /* textdefs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = textdefs.h; sourceTree = "<group>"; };
+		7B1593D116F7212300140560 /* wstring.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wstring.c; sourceTree = "<group>"; };
+		7B1593D216F7212300140560 /* wstring.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = wstring.h; sourceTree = "<group>"; };
+		7B1593D316F7212300140560 /* x86defs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x86defs.h; sourceTree = "<group>"; };
+		7B1593DD16F7213200140560 /* distorm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = distorm.h; sourceTree = "<group>"; };
+		7B1593DE16F7213200140560 /* mnemonics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mnemonics.h; sourceTree = "<group>"; };
 		7B6CDE691659CE3B00893578 /* System.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = System.framework; path = ../../../../System/Library/Frameworks/System.framework; sourceTree = "<group>"; };
 		7B80CD8F165880F100127A39 /* kextstat_aslr */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = kextstat_aslr; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B80CD93165880F100127A39 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
@@ -44,6 +73,34 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		7B1593C116F7210400140560 /* distorm */ = {
+			isa = PBXGroup;
+			children = (
+				7B1593DD16F7213200140560 /* distorm.h */,
+				7B1593DE16F7213200140560 /* mnemonics.h */,
+				7B1593C216F7212200140560 /* config.h */,
+				7B1593C316F7212200140560 /* decoder.c */,
+				7B1593C416F7212200140560 /* decoder.h */,
+				7B1593C516F7212300140560 /* distorm.c */,
+				7B1593C616F7212300140560 /* instructions.c */,
+				7B1593C716F7212300140560 /* instructions.h */,
+				7B1593C816F7212300140560 /* insts.c */,
+				7B1593C916F7212300140560 /* insts.h */,
+				7B1593CA16F7212300140560 /* mnemonics.c */,
+				7B1593CB16F7212300140560 /* operands.c */,
+				7B1593CC16F7212300140560 /* operands.h */,
+				7B1593CD16F7212300140560 /* prefix.c */,
+				7B1593CE16F7212300140560 /* prefix.h */,
+				7B1593CF16F7212300140560 /* textdefs.c */,
+				7B1593D016F7212300140560 /* textdefs.h */,
+				7B1593D116F7212300140560 /* wstring.c */,
+				7B1593D216F7212300140560 /* wstring.h */,
+				7B1593D316F7212300140560 /* x86defs.h */,
+			);
+			name = distorm;
+			path = ..;
+			sourceTree = "<group>";
+		};
 		7B80CD84165880F100127A39 = {
 			isa = PBXGroup;
 			children = (
@@ -66,6 +123,7 @@
 			children = (
 				7B80CD93165880F100127A39 /* main.c */,
 				7B80CD95165880F100127A39 /* kextstat_aslr.1 */,
+				7B1593C116F7210400140560 /* distorm */,
 			);
 			path = kextstat_aslr;
 			sourceTree = "<group>";
@@ -122,6 +180,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				7B80CD94165880F100127A39 /* main.c in Sources */,
+				7B1593D416F7212300140560 /* decoder.c in Sources */,
+				7B1593D516F7212300140560 /* distorm.c in Sources */,
+				7B1593D616F7212300140560 /* instructions.c in Sources */,
+				7B1593D716F7212300140560 /* insts.c in Sources */,
+				7B1593D816F7212300140560 /* mnemonics.c in Sources */,
+				7B1593D916F7212300140560 /* operands.c in Sources */,
+				7B1593DA16F7212300140560 /* prefix.c in Sources */,
+				7B1593DB16F7212300140560 /* textdefs.c in Sources */,
+				7B1593DC16F7212300140560 /* wstring.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

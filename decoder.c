@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #include "x86defs.h"
 #include "operands.h"
 #include "insts.h"
-#include "../include/mnemonics.h"
+#include "mnemonics.h"
 
 
 /* Instruction Prefixes - Opcode - ModR/M - SIB - Displacement - Immediate */
