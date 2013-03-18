@@ -56,6 +56,8 @@
 #include <assert.h>
 #include <sys/syscall.h>
 #include <errno.h>
+#include "distorm.h"
+#include "mnemonics.h"
 
 #define VERSION "0.3"
 
@@ -114,6 +116,7 @@ void usage(void);
 static int8_t readkmem(const int32_t fd, void *buffer, const uint64_t offset, const size_t size);
 static kern_return_t process_kernel_mach_header(const void *kernel_buffer, struct kernel_info *kinfo);
 static uint64_t read_target(uint8_t **targetBuffer, const char *target);
+static mach_vm_address_t find_sloadedkexts(uint8_t *buffer, int32_t buffer_size, mach_vm_address_t offset_addr, mach_vm_address_t iorecursivelocklock);
 
 #pragma mark Functions to read from kernel memory and file system
 
@@ -297,15 +300,93 @@ solve_kernel_symbol(struct kernel_info *kinfo, char *symbol_to_solve)
         // find if symbol matches
         if (strncmp(symbol_to_solve, symbol_string, strlen(symbol_to_solve)) == 0)
         {
-#if DEBUG
-            printf("[DEBUG] found symbol %s at %llx\n", symbol_to_solve, nlist->n_value);
-#endif
+            printf("[INFO] found symbol %s at %p\n", symbol_to_solve, (void*)nlist->n_value);
             // the symbols are without kernel ASLR so we need to add it
             return (nlist->n_value + kinfo->kaslr_slide);
         }
     }
     // failure
     return 0;
+}
+
+/*
+ * disassemble the function and lookup for sLoadedKexts
+ * the format is like this:
+ __text:FFFFFF80005F7090 55                                      push    rbp
+ __text:FFFFFF80005F7091 48 89 E5                                mov     rbp, rsp
+ __text:FFFFFF80005F7094 41 57                                   push    r15
+ __text:FFFFFF80005F7096 41 56                                   push    r14
+ __text:FFFFFF80005F7098 41 55                                   push    r13
+ __text:FFFFFF80005F709A 41 54                                   push    r12
+ __text:FFFFFF80005F709C 53                                      push    rbx
+ __text:FFFFFF80005F709D 50                                      push    rax
+ __text:FFFFFF80005F709E 89 FB                                   mov     ebx, edi
+ __text:FFFFFF80005F70A0 48 8B 3D 59 61 2B 00                    mov     rdi, cs:qword_FFFFFF80008AD200
+ __text:FFFFFF80005F70A7 E8 24 CA 02 00                          call    _IORecursiveLockLock
+ __text:FFFFFF80005F70AC 48 8B 3D 75 61 2B 00                    mov     rdi, cs:sLoadedKexts
+ */
+static mach_vm_address_t
+find_sloadedkexts(uint8_t *buffer, int32_t buffer_size, mach_vm_address_t offset_addr, mach_vm_address_t iorecursivelocklock)
+{
+#define MAX_INSTRUCTIONS 8192
+    // allocate space for disassembly output
+    _DInst *decodedInstructions = malloc(sizeof(_DInst) * MAX_INSTRUCTIONS);
+    if (decodedInstructions == NULL)
+    {
+        printf("[ERROR] Decoded instructions allocation failed!\n");
+        return -1;
+    }
+    unsigned int decodedInstructionsCount = 0;
+	_DecodeResult res = 0;
+    _CodeInfo ci;
+    ci.dt = Decode64Bits;
+    ci.features = DF_NONE;
+    ci.codeLen = (int)buffer_size;
+    ci.code = buffer;
+    ci.codeOffset = offset_addr; // offset to function to be disassembled so diStorm gets addresses correct
+    mach_vm_address_t next;
+    while (1)
+    {
+        res = distorm_decompose(&ci, decodedInstructions, MAX_INSTRUCTIONS, &decodedInstructionsCount);
+        if (res == DECRES_INPUTERR)
+        {
+            // Error handling...
+            printf("[ERROR] Distorm failed to disassemble!\n");
+            goto failure;
+        }
+        // iterate over the disassembly and lookup for CALL instructions
+        for (int i = 0; i < decodedInstructionsCount; i++)
+        {
+            if (decodedInstructions[i].opcode == I_CALL)
+            {
+                // retrieve the target address and see if it matches the symbol we are looking for
+                mach_vm_address_t rip_address = INSTRUCTION_GET_TARGET(&decodedInstructions[i]);
+                if (rip_address == iorecursivelocklock)
+                {
+                    // get the sLoadedKexts from next instruction
+                    mach_vm_address_t sloadedkexts = INSTRUCTION_GET_RIP_TARGET(&decodedInstructions[i+1]);
+                    printf("[INFO] sLoadedKexts at %p\n", (void*)sloadedkexts);
+                    return sloadedkexts;
+                }
+            }
+        }
+        if (res == DECRES_SUCCESS) break; // All instructions were decoded.
+        else if (decodedInstructionsCount == 0) break;
+        // sync the disassembly
+        // the total number of bytes disassembly to previous last instruction
+        next = decodedInstructions[decodedInstructionsCount-1].addr  - ci.codeOffset;
+        // add points to the first byte so add instruction size to it
+        next += decodedInstructions[decodedInstructionsCount-1].size;
+        // update the CodeInfo struct with the synced data
+        ci.code += next;
+        ci.codeOffset += next;
+        ci.codeLen -= next;
+    }
+    end:
+        free(decodedInstructions);
+    failure:
+        free(decodedInstructions);
+        return 0;
 }
 
 /*
@@ -365,11 +446,15 @@ int main(int argc, char ** argv)
     kinfo.linkedit_buf = (void*)((char*)kernel_buffer + kinfo.linkedit_fileoff);
     kinfo.kaslr_slide = kaslr_slide;
     // solve the OSKext::lookupKextWithLoadTag symbol
+    // and _IORecursiveLockLock, because sLoadedKexts is right after
     mach_vm_address_t loadtag_symbol = solve_kernel_symbol(&kinfo, LOOKUPKEXTWITHLOADTAG);
+    mach_vm_address_t iorecursivelocklock = solve_kernel_symbol(&kinfo, "_IORecursiveLockLock");
     // disassemble and find the address of sLoadedKexts
+    // it's easier to read it from memory than disk
+    uint8_t loadtag_buffer[4096];
+    readkmem(fd_kmem, loadtag_buffer, loadtag_symbol, 4096);
+    mach_vm_address_t sLoadedKexts = find_sloadedkexts(loadtag_buffer, 4096, loadtag_symbol, iorecursivelocklock);
     
-    // now we can have the address of pointer to sLoadedKexts
-    mach_vm_address_t sLoadedKexts = SLOADEDKEXTS + kaslr_slide;
     mach_vm_address_t sLoadedKexts_object;
     // read where sLoadedKexts is pointing to so we can get the OSArray object
     readkmem(fd_kmem, &sLoadedKexts_object, sLoadedKexts, 8);
