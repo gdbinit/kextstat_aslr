@@ -7,7 +7,8 @@
 
 Kextstat ASLR
 
-A small util to kernel extensions with true address in Mountain Lion due to KASLR
+A small util to list kernel extensions with true address in Mountain Lion.
+Normal kextstat util doesn't return info with kernel ASLR so it's wrong.
  
 (c) fG!, 2012, 2013 - reverser@put.as - http://reverse.put.as
  
