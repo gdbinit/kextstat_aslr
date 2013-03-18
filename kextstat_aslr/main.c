@@ -91,69 +91,6 @@ void header(void);
 void usage(void);
 int8_t readkmem(const int32_t fd, void *buffer, const uint64_t offset, const size_t size);
 
-/* memzero function by:
- * Copyright 2012, Mansour Moufid <mansourmoufid@gmail.com>
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THIS SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
-void *memzero(void *, size_t);
-void *memzero(void *mem, size_t n)
-{
-    size_t i, j;
-    unsigned long long *q;
-    unsigned long long qzero = 0ULL;
-    unsigned char *b;
-    unsigned char bzero = 0U;
-    
-    assert(mem != NULL);
-    assert(n > 0);
-    
-    i = 0;
-    
-    b = mem;
-    while ((size_t) b % sizeof(qzero) != 0) {
-        *b = bzero;
-        b++;
-        i++;
-        if (i >= n) {
-            return mem;
-        }
-    }
-    
-    if (n-i >= sizeof(qzero)) {
-        q = mem;
-        q += i;
-        q[0] = qzero;
-        for (j = 1; j < (n-i)/sizeof(qzero); j++) {
-            q[j] = q[j-1];
-        }
-        i += j*sizeof(qzero);
-    }
-    
-    if (i >= n) {
-        return mem;
-    }
-    
-    b = mem;
-    b += i;
-    b[0] = bzero;
-    for (j = 1; j < n-i; j++) {
-        b[j] = b[j-1];
-    }
-    
-    return mem;
-}
-
 // retrieve the base address for the IDT
 idt_t
 get_addr_idt (void)
