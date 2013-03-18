@@ -10,21 +10,20 @@
  *
  * A small util to kernel extensions with true address in Mountain Lion due to KASLR
  *
- * (c) fG! - 2012 - reverser@put.as - http://reverse.put.as
+ * (c) fG!, 2012,2013 - reverser@put.as - http://reverse.put.as
  *
  * Note: This requires kmem/mem devices to be enabled
  * Edit /Library/Preferences/SystemConfiguration/com.apple.Boot.plist
  * add kmem=1 parameter, and reboot!
  *
- * To compile:
- * gcc -Wall -o readkmem readkmem.c
- *
  * v0.1 - Initial version
  * v0.2 - Retrieve kaslr slide via kas_info() syscall. Thanks to posixninja for the tip :-)
+ * v0.3 - Cleanups
  *
  * You will need to supply sLoadedKexts symbol, which is not exported.
  * Disassemble the kernel and go to this method OSKext::lookupKextWithLoadTag
  * The pointer address to sLoadedKexts is moved to RDI after the call to IORecursiveLockLock
+ *
  */
 
 #include <stdio.h>
@@ -44,7 +43,7 @@
 #include <sys/syscall.h>
 #include <errno.h>
 
-#define VERSION "0.2"
+#define VERSION "0.3"
 
 #define SLOADEDKEXTS        0xFFFFFF80008AD228
 #define KMOD_MAX_NAME       64
@@ -129,7 +128,7 @@ find_kernel_base(int32_t fd_kmem, const uint64_t int80_address)
 {
     uint64_t temp_address   = int80_address;
     // the step amount to search backwards from int80
-    uint16_t step_value     = 500; // step must be at least sizeof mach_header and a segment_command
+    uint16_t step_value     = 4096; // step must be at least sizeof mach_header and a segment_command
     uint16_t length         = step_value;
     uint8_t *temp_buffer    = malloc(step_value);
     
@@ -161,8 +160,8 @@ find_kernel_base(int32_t fd_kmem, const uint64_t int80_address)
             length = sizeof(struct mach_header_64) + sizeof(struct segment_command_64);
         }
         // check for int overflow
-        if (temp_address - step_value > temp_address)
-            break;
+        if (temp_address - step_value > temp_address) break;
+        
         temp_address -= step_value;
     }
     return(0);
