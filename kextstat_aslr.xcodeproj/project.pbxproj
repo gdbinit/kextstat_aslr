@@ -7,18 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7B1593D416F7212300140560 /* decoder.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593C316F7212200140560 /* decoder.c */; };
-		7B1593D516F7212300140560 /* distorm.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593C516F7212300140560 /* distorm.c */; };
-		7B1593D616F7212300140560 /* instructions.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593C616F7212300140560 /* instructions.c */; };
-		7B1593D716F7212300140560 /* insts.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593C816F7212300140560 /* insts.c */; };
-		7B1593D816F7212300140560 /* mnemonics.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593CA16F7212300140560 /* mnemonics.c */; };
-		7B1593D916F7212300140560 /* operands.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593CB16F7212300140560 /* operands.c */; };
-		7B1593DA16F7212300140560 /* prefix.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593CD16F7212300140560 /* prefix.c */; };
-		7B1593DB16F7212300140560 /* textdefs.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593CF16F7212300140560 /* textdefs.c */; };
-		7B1593DC16F7212300140560 /* wstring.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B1593D116F7212300140560 /* wstring.c */; };
 		7B6CDE6A1659CE3B00893578 /* System.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B6CDE691659CE3B00893578 /* System.framework */; };
 		7B80CD94165880F100127A39 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 7B80CD93165880F100127A39 /* main.c */; };
 		7B80CD96165880F100127A39 /* kextstat_aslr.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 7B80CD95165880F100127A39 /* kextstat_aslr.1 */; };
+		7BDD3EF516FA20BA002ADD4A /* decoder.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BDD3EE216FA20BA002ADD4A /* decoder.c */; };
+		7BDD3EF616FA20BA002ADD4A /* distorm.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BDD3EE416FA20BA002ADD4A /* distorm.c */; };
+		7BDD3EF716FA20BA002ADD4A /* instructions.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BDD3EE616FA20BA002ADD4A /* instructions.c */; };
+		7BDD3EF816FA20BA002ADD4A /* insts.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BDD3EE816FA20BA002ADD4A /* insts.c */; };
+		7BDD3EF916FA20BA002ADD4A /* mnemonics.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BDD3EEA16FA20BA002ADD4A /* mnemonics.c */; };
+		7BDD3EFA16FA20BA002ADD4A /* operands.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BDD3EEC16FA20BA002ADD4A /* operands.c */; };
+		7BDD3EFB16FA20BA002ADD4A /* prefix.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BDD3EEE16FA20BA002ADD4A /* prefix.c */; };
+		7BDD3EFC16FA20BA002ADD4A /* textdefs.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BDD3EF016FA20BA002ADD4A /* textdefs.c */; };
+		7BDD3EFD16FA20BA002ADD4A /* wstring.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BDD3EF216FA20BA002ADD4A /* wstring.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -35,30 +35,30 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		7B1593C216F7212200140560 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
-		7B1593C316F7212200140560 /* decoder.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = decoder.c; sourceTree = "<group>"; };
-		7B1593C416F7212200140560 /* decoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = decoder.h; sourceTree = "<group>"; };
-		7B1593C516F7212300140560 /* distorm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = distorm.c; sourceTree = "<group>"; };
-		7B1593C616F7212300140560 /* instructions.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = instructions.c; sourceTree = "<group>"; };
-		7B1593C716F7212300140560 /* instructions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = instructions.h; sourceTree = "<group>"; };
-		7B1593C816F7212300140560 /* insts.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = insts.c; sourceTree = "<group>"; };
-		7B1593C916F7212300140560 /* insts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = insts.h; sourceTree = "<group>"; };
-		7B1593CA16F7212300140560 /* mnemonics.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mnemonics.c; sourceTree = "<group>"; };
-		7B1593CB16F7212300140560 /* operands.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = operands.c; sourceTree = "<group>"; };
-		7B1593CC16F7212300140560 /* operands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = operands.h; sourceTree = "<group>"; };
-		7B1593CD16F7212300140560 /* prefix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = prefix.c; sourceTree = "<group>"; };
-		7B1593CE16F7212300140560 /* prefix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = prefix.h; sourceTree = "<group>"; };
-		7B1593CF16F7212300140560 /* textdefs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = textdefs.c; sourceTree = "<group>"; };
-		7B1593D016F7212300140560 /* textdefs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = textdefs.h; sourceTree = "<group>"; };
-		7B1593D116F7212300140560 /* wstring.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wstring.c; sourceTree = "<group>"; };
-		7B1593D216F7212300140560 /* wstring.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = wstring.h; sourceTree = "<group>"; };
-		7B1593D316F7212300140560 /* x86defs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x86defs.h; sourceTree = "<group>"; };
-		7B1593DD16F7213200140560 /* distorm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = distorm.h; sourceTree = "<group>"; };
-		7B1593DE16F7213200140560 /* mnemonics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mnemonics.h; sourceTree = "<group>"; };
 		7B6CDE691659CE3B00893578 /* System.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = System.framework; path = ../../../../System/Library/Frameworks/System.framework; sourceTree = "<group>"; };
 		7B80CD8F165880F100127A39 /* kextstat_aslr */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = kextstat_aslr; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B80CD93165880F100127A39 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		7B80CD95165880F100127A39 /* kextstat_aslr.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = kextstat_aslr.1; sourceTree = "<group>"; };
+		7BDD3EE116FA20BA002ADD4A /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = kextstat_aslr/config.h; sourceTree = "<group>"; };
+		7BDD3EE216FA20BA002ADD4A /* decoder.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = decoder.c; path = kextstat_aslr/decoder.c; sourceTree = "<group>"; };
+		7BDD3EE316FA20BA002ADD4A /* decoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = decoder.h; path = kextstat_aslr/decoder.h; sourceTree = "<group>"; };
+		7BDD3EE416FA20BA002ADD4A /* distorm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = distorm.c; path = kextstat_aslr/distorm.c; sourceTree = "<group>"; };
+		7BDD3EE516FA20BA002ADD4A /* distorm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = distorm.h; path = kextstat_aslr/distorm.h; sourceTree = "<group>"; };
+		7BDD3EE616FA20BA002ADD4A /* instructions.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = instructions.c; path = kextstat_aslr/instructions.c; sourceTree = "<group>"; };
+		7BDD3EE716FA20BA002ADD4A /* instructions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = instructions.h; path = kextstat_aslr/instructions.h; sourceTree = "<group>"; };
+		7BDD3EE816FA20BA002ADD4A /* insts.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = insts.c; path = kextstat_aslr/insts.c; sourceTree = "<group>"; };
+		7BDD3EE916FA20BA002ADD4A /* insts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = insts.h; path = kextstat_aslr/insts.h; sourceTree = "<group>"; };
+		7BDD3EEA16FA20BA002ADD4A /* mnemonics.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = mnemonics.c; path = kextstat_aslr/mnemonics.c; sourceTree = "<group>"; };
+		7BDD3EEB16FA20BA002ADD4A /* mnemonics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mnemonics.h; path = kextstat_aslr/mnemonics.h; sourceTree = "<group>"; };
+		7BDD3EEC16FA20BA002ADD4A /* operands.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = operands.c; path = kextstat_aslr/operands.c; sourceTree = "<group>"; };
+		7BDD3EED16FA20BA002ADD4A /* operands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = operands.h; path = kextstat_aslr/operands.h; sourceTree = "<group>"; };
+		7BDD3EEE16FA20BA002ADD4A /* prefix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = prefix.c; path = kextstat_aslr/prefix.c; sourceTree = "<group>"; };
+		7BDD3EEF16FA20BA002ADD4A /* prefix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = prefix.h; path = kextstat_aslr/prefix.h; sourceTree = "<group>"; };
+		7BDD3EF016FA20BA002ADD4A /* textdefs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = textdefs.c; path = kextstat_aslr/textdefs.c; sourceTree = "<group>"; };
+		7BDD3EF116FA20BA002ADD4A /* textdefs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = textdefs.h; path = kextstat_aslr/textdefs.h; sourceTree = "<group>"; };
+		7BDD3EF216FA20BA002ADD4A /* wstring.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = wstring.c; path = kextstat_aslr/wstring.c; sourceTree = "<group>"; };
+		7BDD3EF316FA20BA002ADD4A /* wstring.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = wstring.h; path = kextstat_aslr/wstring.h; sourceTree = "<group>"; };
+		7BDD3EF416FA20BA002ADD4A /* x86defs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = x86defs.h; path = kextstat_aslr/x86defs.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,26 +76,26 @@
 		7B1593C116F7210400140560 /* distorm */ = {
 			isa = PBXGroup;
 			children = (
-				7B1593DD16F7213200140560 /* distorm.h */,
-				7B1593DE16F7213200140560 /* mnemonics.h */,
-				7B1593C216F7212200140560 /* config.h */,
-				7B1593C316F7212200140560 /* decoder.c */,
-				7B1593C416F7212200140560 /* decoder.h */,
-				7B1593C516F7212300140560 /* distorm.c */,
-				7B1593C616F7212300140560 /* instructions.c */,
-				7B1593C716F7212300140560 /* instructions.h */,
-				7B1593C816F7212300140560 /* insts.c */,
-				7B1593C916F7212300140560 /* insts.h */,
-				7B1593CA16F7212300140560 /* mnemonics.c */,
-				7B1593CB16F7212300140560 /* operands.c */,
-				7B1593CC16F7212300140560 /* operands.h */,
-				7B1593CD16F7212300140560 /* prefix.c */,
-				7B1593CE16F7212300140560 /* prefix.h */,
-				7B1593CF16F7212300140560 /* textdefs.c */,
-				7B1593D016F7212300140560 /* textdefs.h */,
-				7B1593D116F7212300140560 /* wstring.c */,
-				7B1593D216F7212300140560 /* wstring.h */,
-				7B1593D316F7212300140560 /* x86defs.h */,
+				7BDD3EE116FA20BA002ADD4A /* config.h */,
+				7BDD3EE216FA20BA002ADD4A /* decoder.c */,
+				7BDD3EE316FA20BA002ADD4A /* decoder.h */,
+				7BDD3EE416FA20BA002ADD4A /* distorm.c */,
+				7BDD3EE516FA20BA002ADD4A /* distorm.h */,
+				7BDD3EE616FA20BA002ADD4A /* instructions.c */,
+				7BDD3EE716FA20BA002ADD4A /* instructions.h */,
+				7BDD3EE816FA20BA002ADD4A /* insts.c */,
+				7BDD3EE916FA20BA002ADD4A /* insts.h */,
+				7BDD3EEA16FA20BA002ADD4A /* mnemonics.c */,
+				7BDD3EEB16FA20BA002ADD4A /* mnemonics.h */,
+				7BDD3EEC16FA20BA002ADD4A /* operands.c */,
+				7BDD3EED16FA20BA002ADD4A /* operands.h */,
+				7BDD3EEE16FA20BA002ADD4A /* prefix.c */,
+				7BDD3EEF16FA20BA002ADD4A /* prefix.h */,
+				7BDD3EF016FA20BA002ADD4A /* textdefs.c */,
+				7BDD3EF116FA20BA002ADD4A /* textdefs.h */,
+				7BDD3EF216FA20BA002ADD4A /* wstring.c */,
+				7BDD3EF316FA20BA002ADD4A /* wstring.h */,
+				7BDD3EF416FA20BA002ADD4A /* x86defs.h */,
 			);
 			name = distorm;
 			path = ..;
@@ -180,15 +180,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				7B80CD94165880F100127A39 /* main.c in Sources */,
-				7B1593D416F7212300140560 /* decoder.c in Sources */,
-				7B1593D516F7212300140560 /* distorm.c in Sources */,
-				7B1593D616F7212300140560 /* instructions.c in Sources */,
-				7B1593D716F7212300140560 /* insts.c in Sources */,
-				7B1593D816F7212300140560 /* mnemonics.c in Sources */,
-				7B1593D916F7212300140560 /* operands.c in Sources */,
-				7B1593DA16F7212300140560 /* prefix.c in Sources */,
-				7B1593DB16F7212300140560 /* textdefs.c in Sources */,
-				7B1593DC16F7212300140560 /* wstring.c in Sources */,
+				7BDD3EF516FA20BA002ADD4A /* decoder.c in Sources */,
+				7BDD3EF616FA20BA002ADD4A /* distorm.c in Sources */,
+				7BDD3EF716FA20BA002ADD4A /* instructions.c in Sources */,
+				7BDD3EF816FA20BA002ADD4A /* insts.c in Sources */,
+				7BDD3EF916FA20BA002ADD4A /* mnemonics.c in Sources */,
+				7BDD3EFA16FA20BA002ADD4A /* operands.c in Sources */,
+				7BDD3EFB16FA20BA002ADD4A /* prefix.c in Sources */,
+				7BDD3EFC16FA20BA002ADD4A /* textdefs.c in Sources */,
+				7BDD3EFD16FA20BA002ADD4A /* wstring.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
