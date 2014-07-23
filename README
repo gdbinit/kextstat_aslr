@@ -7,20 +7,22 @@
 
 Kextstat ASLR
 
-A small util to list kernel extensions with true address in Mountain Lion.
-Normal kextstat util doesn't return info with kernel ASLR so it's wrong.
+A small util to list OS X kernel extensions with true addresses.
+System kextstat util doesn't return info with kernel ASLR slide.
  
-(c) fG!, 2012, 2013 - reverser@put.as - http://reverse.put.as
+(c) fG!, 2012, 2013, 2014 - reverser@put.as - http://reverse.put.as
  
-Note: This requires kmem/mem devices to be enabled
+Uses processor_set_tasks() vulnerability or /dev/kmem to 
+read kernel memory.
+
+If processor_set_tasks() vuln not available you need to enable /dev/kmem.
 Edit /Library/Preferences/SystemConfiguration/com.apple.Boot.plist
 add kmem=1 parameter, and reboot!
 
-This version can work with all Mountain Lion versions out of the box and doesn't
-need anymore supplied values.
+This version can work with all Mountain Lion/Mavericks versions out of the box.
 It should work with any future OS X versions if OSArray class doesn't change.
 
-I had to change the license to GPLv3 due to diStorm licensing terms.
+The license is GPLv3 due to diStorm licensing terms.
 
 Enjoy,
 fG!
@@ -33,4 +35,5 @@ v0.2 - Retrieve kaslr slide via kas_info() syscall. Thanks to posixninja for the
 v0.3 - Cleanups
 v1.0 - Use diStorm to find sLoadedKexts so everything is dynamic
        The only dependency is on OSArray class, since we are using fixed offsets
-
+v1.1 - Try to use processor_set_tasks() vulnerability to read kernel memory
+       before trying to use /dev/kmem

