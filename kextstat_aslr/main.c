@@ -466,7 +466,7 @@ int main(int argc, char ** argv)
 
     // get info from the kernel at disk
     uint8_t *kernel_buffer = NULL;
-    read_target(&kernel_buffer, "/mach_kernel");
+    read_target(&kernel_buffer, "/System/Library/Kernels/kernel");
     // get info we need to solve symbols from Mach-O header
     struct kernel_info kinfo = { 0 };
     if (process_kernel_mach_header((void*)kernel_buffer, &kinfo))
